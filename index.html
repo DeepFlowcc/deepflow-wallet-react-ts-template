@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wallet iframe Communication</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      const originalPostMessage = window.postMessage;
+      window.postMessage = function(message, targetOrigin, transfer) {
+        console.log('【DEBUG】window.postMessage called:', message, targetOrigin);
+        return originalPostMessage.call(this, message, targetOrigin, transfer);
+      };
+
+      window.addEventListener('load', function() {
+        console.log('【DEBUG】Page loaded, window.parent is:', window.parent !== window ? 'different from window' : 'same as window');
+
+        if (window.self !== window.top) {
+          console.log('【DEBUG】We are in an iframe');
+        } else {
+          console.log('【DEBUG】We are not in an iframe');
+        }
+      });
+
+      window.addEventListener('message', function(event) {
+        console.log('【DEBUG】Received message:', event.data, 'from origin:', event.origin);
+      });
+    </script>
+  </body>
+</html>

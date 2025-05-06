@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wallet Provider</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .wallet-container {
+      max-width: 500px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .wallet-info {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: white;
+      border-radius: 8px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div class="wallet-container">
+    <h2>Wallet Provider Simulator</h2>
+    <button id="connect-btn">Connect Wallet</button>
+    <button id="disconnect-btn">Disconnect Wallet</button>
+    <button id="change-balance-btn">Change Balance</button>
+    
+    <div id="wallet-info" class="wallet-info">
+      <p>Wallet status: <span id="status">Disconnected</span></p>
+    </div>
+  </div>
+
+  <script>
+    // Simulated wallet data
+    let walletData = {
+      address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+      balance: '1.5 ETH',
+      network: 'Ethereum Mainnet',
+      connected: false
+    };
+
+    // Function to send wallet info to parent
+    function sendWalletInfo() {
+      window.parent.postMessage({
+        type: 'WALLET_INFO',
+        data: walletData
+      }, '*');
+    }
+
+    // Connect wallet
+    document.getElementById('connect-btn').addEventListener('click', () => {
+      walletData.connected = true;
+      document.getElementById('status').textContent = 'Connected';
+      sendWalletInfo();
+    });
+
+    // Disconnect wallet
+    document.getElementById('disconnect-btn').addEventListener('click', () => {
+      walletData.connected = false;
+      document.getElementById('status').textContent = 'Disconnected';
+      sendWalletInfo();
+    });
+
+    // Change balance (simulate transaction)
+    document.getElementById('change-balance-btn').addEventListener('click', () => {
+      if (walletData.connected) {
+        // Generate random balance between 0.1 and 5 ETH
+        const newBalance = (Math.random() * 4.9 + 0.1).toFixed(2);
+        walletData.balance = `${newBalance} ETH`;
+        sendWalletInfo();
+      }
+    });
+
+    // Listen for messages from parent
+    window.addEventListener('message', (event) => {
+      // In production, validate the origin
+      // if (event.origin !== "https://your-app-domain.com") return;
+      
+      const message = event.data;
+      console.log('Wallet received message:', message);
+      
+      if (message.type === 'CONNECT_WALLET') {
+        walletData.connected = true;
+        document.getElementById('status').textContent = 'Connected';
+        sendWalletInfo();
+      }
+      
+      if (message.type === 'DISCONNECT_WALLET') {
+        walletData.connected = false;
+        document.getElementById('status').textContent = 'Disconnected';
+        sendWalletInfo();
+      }
+
+      // Handle ethereum requests
+      if (message.type === 'ethereum_request') {
+        const { id, args } = message;
+        
+        // Handle different Ethereum methods
+        if (args.method === 'eth_requestAccounts') {
+          window.parent.postMessage({
+            type: 'ethereum_response',
+            id: id,
+            result: [walletData.address]
+          }, '*');
+        }
+        
+        if (args.method === 'eth_getBalance') {
+          // Convert ETH balance to hex
+          const ethValue = parseFloat(walletData.balance);
+          const weiValue = ethValue * 1e18;
+          const hexValue = '0x' + Math.floor(weiValue).toString(16);
+          
+          window.parent.postMessage({
+            type: 'ethereum_response',
+            id: id,
+            result: hexValue
+          }, '*');
+        }
+        
+        if (args.method === 'eth_chainId') {
+          window.parent.postMessage({
+            type: 'ethereum_response',
+            id: id,
+            result: '0x1' // Ethereum mainnet
+          }, '*');
+        }
+      }
+    });
+
+    // Send initial wallet state
+    setTimeout(() => {
+      sendWalletInfo();
+    }, 500);
+  </script>
+</body>
+</html>
